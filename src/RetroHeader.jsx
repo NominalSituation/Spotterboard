@@ -10,8 +10,8 @@ export default function RetroHeader({ marqueeItems = [] }) {
           imageRendering: "pixelated",
         }}
       >
-        <h1 className="text-3xl font-black tracking-wide drop-shadow-sm">✈️ Spotterboard</h1>
-        <p className="text-sm mt-1 opacity-80">Welcome to Spotterboard! Input your spotting below!</p>
+        <h1 className="text-3xl font-black tracking-wide drop-shadow-sm">✈️ Keep It Nominal :)</h1>
+        <p className="text-sm mt-1 opacity-80">An extremely friendly early‑internet hangout for aviation nerds</p>
       </div>
 
       {/* Marquee bar */}

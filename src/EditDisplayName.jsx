@@ -5,7 +5,6 @@ export default function EditDisplayName({ user }) {
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Load from localStorage first, then try profiles (if available)
   useEffect(() => {
     const local = localStorage.getItem("spotter_name") || "";
     setValue(local);
@@ -30,12 +29,12 @@ export default function EditDisplayName({ user }) {
     localStorage.setItem("spotter_name", trimmed);
     if (user?.id) {
       setSaving(true);
-      await supabase.from("profiles").upsert({ id: user.id, display_name: trimmed }, { onConflict: "id" });
+      await supabase
+        .from("profiles")
+        .upsert({ id: user.id, display_name: trimmed }, { onConflict: "id" });
       setSaving(false);
     }
-    // Debug
     console.debug("[name] saved ->", trimmed);
-    alert("Name updated!");
   }
 
   function promptEdit() {
@@ -43,17 +42,14 @@ export default function EditDisplayName({ user }) {
     if (next !== null) setValue(next);
   }
 
+  const fallback = (user?.email || "").split("@")[0];
+
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm text-gray-700">
-        Handle: <span className="font-semibold">@{value || (user?.email || "").split("@")[0]}</span>
+        Handle: <span className="font-semibold">@{value || fallback}</span>
       </span>
-      <button
-        type="button"
-        onClick={promptEdit}
-        className="underline text-[#007c91] text-sm"
-        title="Edit display name"
-      >
+      <button type="button" onClick={promptEdit} className="underline text-[#007c91] text-sm">
         Edit Name
       </button>
       <button

@@ -18,10 +18,10 @@ export default function SightingsList({ sightings, loading }) {
       <ul>
         {sightings.map((s) => (
           <li key={s.id} className="mb-3 border-b pb-3">
-            <div>✈️ <strong>{s.plane_model || "Unknown Airline"}</strong> • {s.aircraft_type || "—"}</div>
+            <div>✈️ <strong>{s.airline || "Unknown Airline"}</strong> • {s.aircraft_type || "—"}</div>
             <div className="text-sm">
               {s.flight_number ? <>Flight {s.flight_number} • </> : null}
-              {s.airport || "???"} • spotted by @{handleFromRow(s)}
+              {s.location || "???"} • spotted by @{handleFromRow(s)}
             </div>
             <div className="text-xs text-gray-500">{new Date(s.created_at).toLocaleString()}</div>
           </li>

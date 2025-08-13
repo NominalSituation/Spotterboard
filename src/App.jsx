@@ -6,7 +6,9 @@ import SightingsList from "./SightingsList";
 import RetroHeader from "./RetroHeader";
 import EditDisplayName from "./EditDisplayName";
 
-// Fallback handle builder for rows that may not have display_name
+const SELECT_FIELDS =
+  "id, airline, location, aircraft_type, flight_number, display_name, username, user_name, user_email, user_id, created_at";
+
 function handleFromRow(row, sessionEmail) {
   return (
     row.display_name ||
@@ -20,15 +22,12 @@ function handleFromRow(row, sessionEmail) {
 export default function App() {
   const [session, setSession] = useState(null);
 
-  // Feeds
   const [mySightings, setMySightings] = useState([]);
   const [allSightings, setAllSightings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all"); // 'all' | 'mine'
 
-  // Tabs: "all" | "mine"
-  const [activeTab, setActiveTab] = useState("all");
-
-  // ===== Auth bootstrap =====
+  // ==== Auth bootstrap ====
   useEffect(() => {
     console.debug("[auth] boot");
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -49,18 +48,15 @@ export default function App() {
         }
       }
     );
-
     return () => listener?.subscription?.unsubscribe();
   }, []);
 
-  // ===== Fetchers =====
+  // ==== Fetchers ====
   async function fetchAllSightings() {
     console.debug("[fetch] all sightings");
     const { data, error } = await supabase
       .from("sightings")
-      .select(
-        "id, plane_model, airport, aircraft_type, flight_number, display_name, username, user_name, user_email, created_at"
-      )
+      .select(SELECT_FIELDS)
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) {
@@ -75,9 +71,7 @@ export default function App() {
     console.debug("[fetch] my sightings for", email);
     const { data, error } = await supabase
       .from("sightings")
-      .select(
-        "id, plane_model, airport, aircraft_type, flight_number, display_name, username, user_name, user_email, created_at"
-      )
+      .select(SELECT_FIELDS)
       .eq("user_email", email)
       .order("created_at", { ascending: false });
     if (error) {
@@ -90,12 +84,14 @@ export default function App() {
   async function refreshFeeds(email) {
     setLoading(true);
     const [all, mine] = await Promise.all([fetchAllSightings(), fetchMySightings(email)]);
+    console.debug("[fetch] ALL count:", all.length, all[0]);
+    console.debug("[fetch] MINE count:", mine.length, mine[0]);
     setAllSightings(all);
     setMySightings(mine);
     setLoading(false);
   }
 
-  // ===== Realtime inserts =====
+  // ==== Realtime inserts ====
   useEffect(() => {
     const channel = supabase
       .channel("sightings-insert")
@@ -115,35 +111,31 @@ export default function App() {
     return () => supabase.removeChannel(channel);
   }, [session?.user?.email]);
 
-  // ===== Build marquee (latest 10 global) =====
+  // ==== Marquee (latest 10 global) ====
   const marqueeItems = useMemo(() => {
     const rows = allSightings.slice(0, 10);
     return rows.map((s) => {
       const who = handleFromRow(s, session?.user?.email);
-      const airline = s.plane_model || "Unknown Airline";
+      const airline = s.airline || "Unknown Airline";
       const type = s.aircraft_type || "—";
-      const apt = s.airport || "???";
+      const apt = s.location || "???";
       return `${airline} • ${type} @ ${apt} • by @${who}`;
     });
   }, [allSightings, session?.user?.email]);
 
-  // ===== UI =====
   return (
     <main
       className="min-h-screen p-4"
       style={{
-        // light retro wallpaper vibe (matches your old look)
         background:
           "repeating-linear-gradient(45deg, #f6f6ff, #f6f6ff 14px, #f0faff 14px, #f0faff 28px)",
       }}
     >
       <div className="max-w-3xl mx-auto">
-        {/* Original retro header with the scrolling marquee */}
         <RetroHeader marqueeItems={marqueeItems} />
 
         {session ? (
           <div className="bg-white border-2 border-[#80deea] rounded-2xl p-4 shadow-md">
-            {/* Welcome row + Edit Name + Logout */}
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-xl font-bold">Welcome, {session.user.email}</h1>
               <div className="flex items-center gap-3">
@@ -157,10 +149,19 @@ export default function App() {
               </div>
             </div>
 
-            {/* Report form */}
-            <NewSighting user={session.user} onAdd={() => refreshFeeds(session.user.email)} />
+            <NewSighting
+              user={session.user}
+              onAdd={(newRow) => {
+                // Optimistic UI
+                setAllSightings((prev) => [newRow, ...prev].slice(0, 100));
+                if (newRow.user_email === session.user.email) {
+                  setMySightings((prev) => [newRow, ...prev]);
+                }
+                // Canonical refresh
+                refreshFeeds(session.user.email);
+              }}
+            />
 
-            {/* Tabs */}
             <div className="mt-6">
               <div className="inline-flex rounded-full overflow-hidden border-2 border-[#00bcd4] shadow">
                 <button

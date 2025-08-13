@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "./supabaseClient";
 
-const handleFromEmail = (email) => (email || "").split("@")[0] || "Unknown";
+const emailHandle = (email) => (email || "").split("@")[0] || "Unknown";
 
 export default function NewSighting({ user, onAdd }) {
   const [airline, setAirline] = useState("");
@@ -12,21 +12,22 @@ export default function NewSighting({ user, onAdd }) {
   const submit = async (e) => {
     e.preventDefault();
 
-    const displayName =
-      localStorage.getItem("spotter_name") || handleFromEmail(user?.email);
+    const displayName = localStorage.getItem("spotter_name") || emailHandle(user?.email);
 
     const row = {
       airline: airline.trim(),
-      aircraft: null,                // keep if you also store a text "aircraft" model
       aircraft_type: aircraftType.trim(),
       flight_number: flightNumber.trim() || null,
       location: location.trim(),
       user_email: user?.email || null,
-      user_id: user?.id || null,     // required by the RLS policy above
+      user_id: user?.id || null, // RLS-friendly
       display_name: displayName,
+      created_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from("sightings").insert([row]);
+    console.debug("[insert] row ->", row);
+
+    const { data, error } = await supabase.from("sightings").insert([row]).select().single();
 
     if (error) {
       console.error("[insert] error:", error);
@@ -34,7 +35,7 @@ export default function NewSighting({ user, onAdd }) {
       return;
     }
 
-    onAdd?.();
+    onAdd?.(data || row); // optimistic handoff
     setAirline("");
     setAircraftType("");
     setFlightNumber("");
