@@ -21,6 +21,9 @@ function handleFromRow(row, sessionEmail) {
 export default function App() {
   const [session, setSession] = useState(null);
 
+  // profile for greeting (display_name)
+  const [profile, setProfile] = useState(null);
+
   const [mySightings, setMySightings] = useState([]);
   const [allSightings, setAllSightings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,22 +33,45 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) refreshFeeds(session.user.email);
-      else setLoading(false);
+      if (session) {
+        refreshFeeds(session.user.email);
+        fetchMyProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_evt, newSession) => {
         setSession(newSession);
-        if (newSession) refreshFeeds(newSession.user.email);
-        else {
+        if (newSession) {
+          refreshFeeds(newSession.user.email);
+          fetchMyProfile(newSession.user.id);
+        } else {
           setMySightings([]);
           setAllSightings([]);
+          setProfile(null);
         }
       }
     );
     return () => listener?.subscription?.unsubscribe();
   }, []);
+
+  // ===== Profile (display_name) =====
+  async function fetchMyProfile(userId) {
+    if (!userId) return;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("display_name, username")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) {
+      console.error("[profile] fetch error:", error);
+      setProfile(null);
+      return;
+    }
+    setProfile(data || null);
+  }
 
   // ===== Fetchers =====
   async function fetchAllSightings() {
@@ -77,7 +103,10 @@ export default function App() {
 
   async function refreshFeeds(email) {
     setLoading(true);
-    const [all, mine] = await Promise.all([fetchAllSightings(), fetchMySightings(email)]);
+    const [all, mine] = await Promise.all([
+      fetchAllSightings(),
+      fetchMySightings(email),
+    ]);
     setAllSightings(all);
     setMySightings(mine);
     setLoading(false);
@@ -92,7 +121,10 @@ export default function App() {
         { event: "INSERT", schema: "public", table: "sightings" },
         (payload) => {
           setAllSightings((prev) => [payload.new, ...prev].slice(0, 100));
-          if (session?.user?.email && payload.new.user_email === session.user.email) {
+          if (
+            session?.user?.email &&
+            payload.new.user_email === session.user.email
+          ) {
             setMySightings((prev) => [payload.new, ...prev]);
           }
         }
@@ -147,6 +179,12 @@ export default function App() {
     return topLine ? [topLine, ...lines] : lines;
   }, [allSightings, session?.user?.email, topLine]);
 
+  // ===== Greeting text uses display_name =====
+  const greeting =
+    (profile?.display_name && `Welcome, ${profile.display_name}`) ||
+    (session?.user?.email && `Welcome, ${session.user.email}`) ||
+    "Welcome";
+
   return (
     <main
       className="min-h-screen p-4"
@@ -162,7 +200,7 @@ export default function App() {
           <div className="bg-white border-2 border-[#80deea] rounded-2xl p-4 shadow-md">
             {/* Welcome + handle + logout */}
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl font-bold">Welcome, {session.user.email}</h1>
+              <h1 className="text-xl font-bold">{greeting}</h1>
               <div className="flex items-center gap-3">
                 <EditDisplayName user={session.user} />
                 <button
@@ -191,7 +229,9 @@ export default function App() {
               <button
                 onClick={() => setActiveTab("all")}
                 className={`px-4 py-2 text-sm font-semibold ${
-                  activeTab === "all" ? "bg-[#00bcd4] text-white" : "bg-white text-[#007c91]"
+                  activeTab === "all"
+                    ? "bg-[#00bcd4] text-white"
+                    : "bg-white text-[#007c91]"
                 }`}
                 title="See everyone’s sightings"
               >
@@ -200,7 +240,9 @@ export default function App() {
               <button
                 onClick={() => setActiveTab("mine")}
                 className={`px-4 py-2 text-sm font-semibold ${
-                  activeTab === "mine" ? "bg-[#00bcd4] text-white" : "bg-white text-[#007c91]"
+                  activeTab === "mine"
+                    ? "bg-[#00bcd4] text-white"
+                    : "bg-white text-[#007c91]"
                 }`}
                 title="Just yours"
               >
