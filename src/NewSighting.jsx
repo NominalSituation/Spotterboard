@@ -1,70 +1,85 @@
-import { useState } from 'react';
-import { supabase } from './supabaseClient';
+import { useState } from "react";
+import { supabase } from "./supabaseClient";
 
-export default function NewSighting({ session, onSightingAdded }) {
+function emailHandle(email) {
+  return (email || "").split("@")[0] || "Unknown";
+}
+
+export default function NewSighting({ user, onAdd }) {
   const [airline, setAirline] = useState("");
-  const [aircraft, setAircraft] = useState("");
+  const [airport, setAirport] = useState("");
+  const [aircraftType, setAircraftType] = useState("");
   const [flightNumber, setFlightNumber] = useState("");
-  const [location, setLocation] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!session?.user?.id) {
-      alert('You must be logged in to submit a sighting.');
-      return;
-    }
+    const displayName = localStorage.getItem("spotter_name") || emailHandle(user?.email);
 
-    const { data, error } = await supabase
-      .from('sightings')
-      .insert({
-        airline,
-        aircraft_type: aircraft, // ✅ mapped correctly
-        flight_number: flightNumber,
-        location,
-        user_id: session.user.id
-      });
+    const row = {
+      plane_model: airline.trim(),
+      airport: airport.trim(),
+      user_email: user?.email || null,
+      user_id: user?.id || null,
+      display_name: displayName,
+      aircraft_type: aircraftType.trim(),
+      flight_number: flightNumber.trim() || null,
+    };
+
+    console.debug("[insert] row ->", row);
+
+    const { error } = await supabase.from("sightings").insert([row]);
 
     if (error) {
-      console.error('Error inserting sighting:', error);
-      alert('Error submitting sighting: ' + error.message);
+      console.error("[insert] error:", error);
+      alert("Error submitting sighting");
     } else {
-      // Reset form
+      onAdd?.();
       setAirline("");
-      setAircraft("");
+      setAirport("");
+      setAircraftType("");
       setFlightNumber("");
-      setLocation("");
-      if (onSightingAdded) onSightingAdded();
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="mb-8">
+      <h2 className="text-lg font-bold mb-4">Report New Sighting</h2>
+
       <input
         type="text"
         placeholder="Airline"
         value={airline}
         onChange={(e) => setAirline(e.target.value)}
+        className="border px-4 py-2 mr-2 mb-2"
+        required
       />
       <input
         type="text"
-        placeholder="Aircraft"
-        value={aircraft}
-        onChange={(e) => setAircraft(e.target.value)}
+        placeholder="Aircraft Type (e.g., A320, 737‑800)"
+        value={aircraftType}
+        onChange={(e) => setAircraftType(e.target.value)}
+        className="border px-4 py-2 mr-2 mb-2"
+        required
       />
       <input
         type="text"
-        placeholder="Flight Number"
+        placeholder="Flight Number (optional)"
         value={flightNumber}
         onChange={(e) => setFlightNumber(e.target.value)}
+        className="border px-4 py-2 mr-2 mb-2"
       />
       <input
         type="text"
-        placeholder="Location"
-        value={location}
-        onChange={(e) => setLocation(e.target.value)}
+        placeholder="Airport (e.g., KORD)"
+        value={airport}
+        onChange={(e) => setAirport(e.target.value)}
+        className="border px-4 py-2 mr-2 mb-2"
+        required
       />
-      <button type="submit">Submit</button>
+      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+        Submit
+      </button>
     </form>
   );
 }
