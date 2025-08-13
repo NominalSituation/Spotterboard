@@ -193,16 +193,21 @@ export default function App() {
           "repeating-linear-gradient(45deg, #f6f6ff, #f6f6ff 14px, #f0faff 14px, #f0faff 28px)",
       }}
     >
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <RetroHeader marqueeItems={marqueeItems} />
 
         {session ? (
           <div className="bg-white border-2 border-[#80deea] rounded-2xl p-4 shadow-md">
-            {/* Welcome + handle + logout */}
+            {/* Welcome + display name + logout */}
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-xl font-bold">{greeting}</h1>
               <div className="flex items-center gap-3">
-                <EditDisplayName user={session.user} />
+                <EditDisplayName
+                  user={session.user}
+                  onSaved={(p) =>
+                    setProfile((old) => ({ ...(old || {}), ...(p || {}) }))
+                  }
+                />
                 <button
                   onClick={() => supabase.auth.signOut()}
                   className="bg-red-600 text-white px-4 py-2 rounded"
@@ -250,10 +255,10 @@ export default function App() {
               </button>
             </div>
 
-            {/* Main content + sidebar */}
-            <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* LEFT: feed */}
-              <div className="lg:col-span-2">
+            {/* MAIN AREA: left feed + right leaderboard */}
+            <div className="mt-4 flex flex-col lg:flex-row items-start gap-6">
+              {/* LEFT: feed grows */}
+              <div className="flex-1 min-w-0">
                 {activeTab === "all" && (
                   <SightingsList sightings={allSightings} loading={loading} />
                 )}
@@ -262,8 +267,11 @@ export default function App() {
                 )}
               </div>
 
-              {/* RIGHT: Top Spotter card */}
-              <aside className="lg:col-span-1 space-y-6">
+              {/* RIGHT: fixed-width sidebar */}
+              <aside
+                className="w-full lg:w-[320px] shrink-0"
+                aria-label="Right sidebar"
+              >
                 <TopSpotterCard limit={5} />
               </aside>
             </div>
