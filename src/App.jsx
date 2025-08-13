@@ -3,14 +3,17 @@ import { supabase } from './supabaseClient';
 import Auth from './Auth';
 import NewSighting from './NewSighting';
 import SightingsList from './SightingsList';
+import RecentSightingsTicker from './RecentSightingsTicker';
+import './App.css';
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [allSightings, setAllSightings] = useState([]);
-  const [mySightings, setMySightings] = useState([]);
+  const [sightings, setSightings] = useState([]);
+  const [personalSightings, setPersonalSightings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('all');
+  const [view, setView] = useState('all'); // 'all' or 'mine'
 
+  // Load auth state
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -20,13 +23,16 @@ export default function App() {
       setSession(session);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
+  // Fetch sightings
   useEffect(() => {
-    if (session?.user) {
+    if (session) {
       fetchAllSightings();
-      fetchMySightings();
+      fetchPersonalSightings();
     }
   }, [session]);
 
@@ -34,46 +40,35 @@ export default function App() {
     setLoading(true);
     const { data, error } = await supabase
       .from('sightings')
-      .select(`
-        id,
-        airline,
-        aircraft_type,
-        flight_number,
-        location,
-        created_at,
-        profiles(username)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) console.error(error);
-    else setAllSightings(data);
-
+    if (error) {
+      console.error('Error fetching all sightings:', error);
+    } else {
+      setSightings(data);
+    }
     setLoading(false);
   }
 
-  async function fetchMySightings() {
-    if (!session?.user?.id) return;
+  async function fetchPersonalSightings() {
+    if (!session?.user?.email) return;
     const { data, error } = await supabase
       .from('sightings')
-      .select(`
-        id,
-        airline,
-        aircraft_type,
-        flight_number,
-        location,
-        created_at,
-        profiles(username)
-      `)
-      .eq('user_id', session.user.id)
+      .select('*')
+      .eq('user_email', session.user.email)
       .order('created_at', { ascending: false });
 
-    if (error) console.error(error);
-    else setMySightings(data);
+    if (error) {
+      console.error('Error fetching personal sightings:', error);
+    } else {
+      setPersonalSightings(data);
+    }
   }
 
-  function handleSightingAdded() {
-    fetchAllSightings();
-    fetchMySightings();
+  async function handleNewSighting() {
+    await fetchAllSightings();
+    await fetchPersonalSightings();
   }
 
   if (!session) {
@@ -81,26 +76,35 @@ export default function App() {
   }
 
   return (
-    <div>
-      <header style={{ background: 'linear-gradient(to right, #dff, #cff)', padding: '10px' }}>
+    <div className="app-container">
+      {/* HEADER */}
+      <header className="header">
         <h1>✈ Spotterboard</h1>
-        <p>
-          Welcome, @{session.user.user_metadata?.username || session.user.email}{' '}
-          <button onClick={() => supabase.auth.signOut()}>Log Out</button>
-        </p>
+        <p>Welcome, @{session.user.user_metadata.username || session.user.email}</p>
+        <button onClick={() => supabase.auth.signOut()}>Log Out</button>
       </header>
 
-      <NewSighting session={session} onSightingAdded={handleSightingAdded} />
+      {/* TICKER */}
+      <RecentSightingsTicker />
 
-      <div style={{ marginTop: '1rem' }}>
+      {/* NEW SIGHTING FORM */}
+      <section>
+        <NewSighting session={session} onSightingAdded={handleNewSighting} />
+      </section>
+
+      {/* VIEW TOGGLE */}
+      <div style={{ marginTop: '20px' }}>
         <button onClick={() => setView('all')}>All Sightings</button>
         <button onClick={() => setView('mine')}>My Sightings</button>
       </div>
 
+      {/* SIGHTINGS LIST */}
       {loading ? (
-        <p>Loading...</p>
+        <p>Loading sightings...</p>
+      ) : view === 'all' ? (
+        <SightingsList sightings={sightings} />
       ) : (
-        <SightingsList sightings={view === 'all' ? allSightings : mySightings} />
+        <SightingsList sightings={personalSightings} />
       )}
     </div>
   );

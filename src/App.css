@@ -40,3 +40,76 @@
 .read-the-docs {
   color: #888;
 }
+
+.app-container {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: #fff;
+  padding: 0;
+  margin: 0;
+}
+
+.header {
+  background: linear-gradient(to right, #b2fefa, #0ed2f7);
+  padding: 10px;
+}
+
+.header h1 {
+  margin: 0;
+}
+
+.ticker {
+  background: linear-gradient(to right, #e0f7fa, #b2ebf2);
+  padding: 5px;
+  font-weight: bold;
+}
+
+.view-switch {
+  margin-top: 10px;
+}
+
+.view-switch button {
+  margin-right: 10px;
+  padding: 5px 10px;
+}
+
+import { useEffect, useState } from 'react';
+import { supabase } from './supabaseClient';
+
+export default function Ticker() {
+  const [sightings, setSightings] = useState([]);
+
+  // Fetch latest 20 sightings
+  async function fetchTickerSightings() {
+    const { data, error } = await supabase
+      .from('sightings')
+      .select('airline, aircraft_type, flight_number, location')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error('Error fetching ticker sightings:', error);
+    } else {
+      setSightings(data || []);
+    }
+  }
+
+  useEffect(() => {
+    fetchTickerSightings(); // first load
+    const interval = setInterval(fetchTickerSightings, 10000); // refresh every 10 sec
+    return () => clearInterval(interval); // cleanup
+  }, []);
+
+  return (
+    <div className="ticker">
+      <marquee behavior="scroll" direction="left">
+        {sightings.length === 0
+          ? 'No sightings yet — log one!'
+          : sightings
+              .map(s =>
+                `${s.airline} • ${s.aircraft_type} • Flight ${s.flight_number} • ${s.location}`
+              )
+              .join('  ✈  ')}
+      </marquee>
+    </div>
+  );
+}
