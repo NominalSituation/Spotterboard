@@ -19,7 +19,7 @@ export default function NewSighting({ session, onSightingAdded }) {
       .from('sightings')
       .insert({
         airline,
-        aircraft_type: aircraft, // ✅ matches Supabase column name
+        aircraft_type: aircraft, // ✅ mapped correctly
         flight_number: flightNumber,
         location,
         user_id: session.user.id
@@ -29,13 +29,11 @@ export default function NewSighting({ session, onSightingAdded }) {
       console.error('Error inserting sighting:', error);
       alert('Error submitting sighting: ' + error.message);
     } else {
-      // Reset form fields
+      // Reset form
       setAirline("");
       setAircraft("");
       setFlightNumber("");
       setLocation("");
-
-      // Notify parent to refresh sightings
       if (onSightingAdded) onSightingAdded();
     }
   };
@@ -50,7 +48,7 @@ export default function NewSighting({ session, onSightingAdded }) {
       />
       <input
         type="text"
-        placeholder="Aircraft Type"
+        placeholder="Aircraft"
         value={aircraft}
         onChange={(e) => setAircraft(e.target.value)}
       />
