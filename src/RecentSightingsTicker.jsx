@@ -1,59 +1,39 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 
-export default function RecentSightingsTicker({ intervalMs = 8000 }) {
+export default function RecentSightingsTicker() {
   const [sightings, setSightings] = useState([]);
-  const [i, setI] = useState(0);
 
   useEffect(() => {
-    async function fetchSightings() {
-      const { data, error } = await supabase
-        .from("sightings")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (!error) setSightings(data);
-    }
-
-    fetchSightings();
+    fetchRecentSightings();
   }, []);
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      setI((n) => (n + 1) % sightings.length);
-    }, intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs, sightings.length]);
+  async function fetchRecentSightings() {
+    const { data, error } = await supabase
+      .from("sightings")
+      .select("airline, aircraft, flight_number, location, created_at")
+      .order("created_at", { ascending: false }) // newest first
+      .limit(20); // only last 20
 
-  if (sightings.length === 0) return null;
-
-  const current = sightings[i];
+    if (error) {
+      console.error("Error fetching sightings:", error);
+    } else {
+      setSightings(data);
+    }
+  }
 
   return (
-    <div style={{ overflow: "hidden", whiteSpace: "nowrap", background: "transparent" }}>
-      <div
-        style={{
-          display: "inline-block",
-          paddingLeft: "100%",
-          animation: `scroll-left ${intervalMs}ms linear infinite`,
-        }}
-      >
-        ✈ {current.airline} • {current.aircraft_type} @ {current.airport}
-      </div>
-
-      <style>
-        {`
-          @keyframes scroll-left {
-            0% {
-              transform: translateX(100%);
-            }
-            100% {
-              transform: translateX(-100%);
-            }
-          }
-        `}
-      </style>
+    <div className="ticker">
+      <span>
+        {sightings.map((sighting, index) => (
+          <span key={index}>
+            ✈ {sighting.airline} • {sighting.aircraft} — Flight{" "}
+            {sighting.flight_number} @ {sighting.location}{" "}
+            ({new Date(sighting.created_at).toLocaleString()}){" "}
+            {index < sightings.length - 1 && " • "}
+          </span>
+        ))}
+      </span>
     </div>
   );
 }

@@ -1,115 +1,119 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+/* Import retro font */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
+/* Main container styling */
 .app-container {
-  font-family: 'Courier New', Courier, monospace;
-  background-color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  background-color: #ffffff;
   padding: 0;
   margin: 0;
 }
 
+/* Header styling */
 .header {
   background: linear-gradient(to right, #b2fefa, #0ed2f7);
-  padding: 10px;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #ccc;
 }
 
 .header h1 {
   margin: 0;
+  font-weight: bold;
+  font-size: 1em;
+  display: flex;
+  align-items: center;
 }
 
+.header span {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.header button {
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 5px 8px;
+  margin-left: 5px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.header button:hover {
+  background-color: #f0f0f0;
+}
+
+/* Ticker styling */
 .ticker {
-  background: linear-gradient(to right, #e0f7fa, #b2ebf2);
-  padding: 5px;
+  background-color: #222;
+  color: #fff;
+  padding: 5px 0;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.ticker span {
+  display: inline-block;
+  padding-left: 100%;
+  animation: tickerScroll 40s linear infinite; /* Slower ticker */
+}
+
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+/* Form section */
+section {
+  background-color: #fdf8ec;
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
+section input {
+  padding: 4px;
+  margin-right: 5px;
+  border: 1px solid #ccc;
+  font-family: inherit;
+}
+
+section button {
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Sightings list */
+.view-toggle {
+  padding: 10px;
+}
+
+.view-toggle button {
+  margin-right: 5px;
+  padding: 5px 10px;
+  font-family: inherit;
+}
+
+ul {
+  padding-left: 20px;
+}
+
+li {
+  margin-bottom: 10px;
+}
+
+li span {
   font-weight: bold;
 }
 
-.view-switch {
-  margin-top: 10px;
-}
-
-.view-switch button {
-  margin-right: 10px;
-  padding: 5px 10px;
-}
-
-import { useEffect, useState } from 'react';
-import { supabase } from './supabaseClient';
-
-export default function Ticker() {
-  const [sightings, setSightings] = useState([]);
-
-  // Fetch latest 20 sightings
-  async function fetchTickerSightings() {
-    const { data, error } = await supabase
-      .from('sightings')
-      .select('airline, aircraft_type, flight_number, location')
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (error) {
-      console.error('Error fetching ticker sightings:', error);
-    } else {
-      setSightings(data || []);
-    }
-  }
-
-  useEffect(() => {
-    fetchTickerSightings(); // first load
-    const interval = setInterval(fetchTickerSightings, 10000); // refresh every 10 sec
-    return () => clearInterval(interval); // cleanup
-  }, []);
-
-  return (
-    <div className="ticker">
-      <marquee behavior="scroll" direction="left">
-        {sightings.length === 0
-          ? 'No sightings yet — log one!'
-          : sightings
-              .map(s =>
-                `${s.airline} • ${s.aircraft_type} • Flight ${s.flight_number} • ${s.location}`
-              )
-              .join('  ✈  ')}
-      </marquee>
-    </div>
-  );
+/* Footer */
+footer {
+  background-color: #f5f5f5;
+  padding: 10px;
+  font-size: 0.7em;
+  color: #666;
+  text-align: center;
 }

@@ -11,9 +11,10 @@ export default function App() {
   const [sightings, setSightings] = useState([]);
   const [personalSightings, setPersonalSightings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('all'); // 'all' or 'mine'
+  const [view, setView] = useState('all');
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
 
-  // Load auth state
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -28,7 +29,6 @@ export default function App() {
     };
   }, []);
 
-  // Fetch sightings
   useEffect(() => {
     if (session) {
       fetchAllSightings();
@@ -71,6 +71,24 @@ export default function App() {
     await fetchPersonalSightings();
   }
 
+  async function updateUsername() {
+    const { error } = await supabase.auth.updateUser({
+      data: { username: newName }
+    });
+    if (error) {
+      console.error('Error updating username:', error);
+    } else {
+      setEditingName(false);
+      setSession({
+        ...session,
+        user: {
+          ...session.user,
+          user_metadata: { ...session.user.user_metadata, username: newName }
+        }
+      });
+    }
+  }
+
   if (!session) {
     return <Auth />;
   }
@@ -80,12 +98,26 @@ export default function App() {
       {/* HEADER */}
       <header className="header">
         <h1>✈ Spotterboard</h1>
-        <p>Welcome, @{session.user.user_metadata.username || session.user.email}</p>
+        <div>
+          <span>Welcome, @{session.user.user_metadata.username || session.user.email}</span>
+          {!editingName ? (
+            <button onClick={() => {
+              setNewName(session.user.user_metadata.username || '');
+              setEditingName(true);
+            }}>Edit Name</button>
+          ) : (
+            <span>
+              <input value={newName} onChange={(e) => setNewName(e.target.value)} />
+              <button onClick={updateUsername}>Save</button>
+              <button onClick={() => setEditingName(false)}>Cancel</button>
+            </span>
+          )}
+        </div>
         <button onClick={() => supabase.auth.signOut()}>Log Out</button>
       </header>
 
       {/* TICKER */}
-      <RecentSightingsTicker />
+      <RecentSightingsTicker speed={40} /> {/* Slowed down */}
 
       {/* NEW SIGHTING FORM */}
       <section>
@@ -93,7 +125,7 @@ export default function App() {
       </section>
 
       {/* VIEW TOGGLE */}
-      <div style={{ marginTop: '20px' }}>
+      <div className="view-toggle">
         <button onClick={() => setView('all')}>All Sightings</button>
         <button onClick={() => setView('mine')}>My Sightings</button>
       </div>
