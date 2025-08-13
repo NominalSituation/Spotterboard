@@ -1,49 +1,48 @@
-import { useState } from "react";
-import { supabase } from "./supabaseClient";
+import { useState } from 'react';
+import { supabase } from './supabaseClient';
 
 export default function NewSighting({ session, onSightingAdded }) {
-  const [airline, setAirline] = useState("");
-  const [aircraft, setAircraft] = useState("");
-  const [flightNumber, setFlightNumber] = useState("");
-  const [location, setLocation] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [airline, setAirline] = useState('');
+  const [aircraft, setAircraft] = useState('');
+  const [flightNumber, setFlightNumber] = useState('');
+  const [location, setLocation] = useState('');
 
-  async function submitSighting(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
-    try {
-      const { error } = await supabase.from("sightings").insert([
+    if (!session?.user?.id) {
+      alert('You must be logged in to submit a sighting.');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('sightings')
+      .insert([
         {
           airline,
           aircraft,
           flight_number: flightNumber,
           location,
-          user_id: session.user.id, // Important for RLS
-        },
+          user_id: session.user.id // ✅ This matches your RLS policy
+        }
       ]);
 
-      if (error) throw error;
-
-      // Reset form fields
-      setAirline("");
-      setAircraft("");
-      setFlightNumber("");
-      setLocation("");
-
+    if (error) {
+      console.error('Error inserting sighting:', error);
+      alert('Error submitting sighting: ' + error.message);
+    } else {
+      setAirline('');
+      setAircraft('');
+      setFlightNumber('');
+      setLocation('');
       if (onSightingAdded) {
-        onSightingAdded();
+        onSightingAdded(data[0]); // Call parent refresh if needed
       }
-    } catch (error) {
-      console.error("Error submitting sighting:", error.message);
-      alert("Failed to submit sighting: " + error.message);
-    } finally {
-      setLoading(false);
     }
-  }
+  };
 
   return (
-    <form onSubmit={submitSighting} style={{ marginBottom: "1rem" }}>
+    <form onSubmit={handleSubmit}>
       <input
         type="text"
         placeholder="Airline"
@@ -72,10 +71,7 @@ export default function NewSighting({ session, onSightingAdded }) {
         onChange={(e) => setLocation(e.target.value)}
         required
       />
-      <button type="submit" disabled={loading}>
-        {loading ? "Submitting..." : "Submit"}
-      </button>
+      <button type="submit">Submit</button>
     </form>
   );
 }
-
