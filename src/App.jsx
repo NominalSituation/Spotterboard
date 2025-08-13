@@ -7,13 +7,11 @@ import RetroHeader from "./RetroHeader";
 import EditDisplayName from "./EditDisplayName";
 
 const SELECT_FIELDS =
-  "id, airline, location, aircraft_type, flight_number, display_name, username, user_name, user_email, user_id, created_at";
+  "id, airline, location, aircraft_type, flight_number, display_name, user_email, user_id, created_at";
 
 function handleFromRow(row, sessionEmail) {
   return (
     row.display_name ||
-    row.username ||
-    row.user_name ||
     (row.user_email || sessionEmail || "").split("@")[0] ||
     "Unknown"
   );
