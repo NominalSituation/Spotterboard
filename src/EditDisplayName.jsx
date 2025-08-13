@@ -2,61 +2,105 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 
 export default function EditDisplayName({ user }) {
-  const [value, setValue] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // Load profile (both fields) on mount
   useEffect(() => {
-    const local = localStorage.getItem("spotter_name") || "";
-    setValue(local);
-
-    async function loadProfile() {
-      if (!user?.id) return;
+    let alive = true;
+    async function load() {
+      if (!user?.id) { setLoading(false); return; }
       const { data, error } = await supabase
         .from("profiles")
-        .select("display_name")
+        .select("display_name, username")
         .eq("id", user.id)
         .maybeSingle();
-      if (!error && data?.display_name) {
-        setValue(data.display_name);
-        localStorage.setItem("spotter_name", data.display_name);
+      if (!alive) return;
+
+      const emailHandle = (user.email || "").split("@")[0];
+
+      if (error) {
+        console.error("[profiles] fetch error:", error);
+        // fallbacks
+        setDisplayName(localStorage.getItem("spotter_name") || emailHandle);
+        setUsername(emailHandle);
+      } else if (data) {
+        setDisplayName(data.display_name || localStorage.getItem("spotter_name") || emailHandle);
+        setUsername(data.username || emailHandle);
+      } else {
+        // no profile row yet
+        setDisplayName(localStorage.getItem("spotter_name") || emailHandle);
+        setUsername(emailHandle);
       }
+
+      setLoading(false);
     }
-    loadProfile();
-  }, [user?.id]);
+    load();
+    return () => { alive = false; };
+  }, [user?.id, user?.email]);
 
   async function save() {
-    const trimmed = value.trim();
-    localStorage.setItem("spotter_name", trimmed);
-    if (user?.id) {
-      setSaving(true);
-      await supabase
-        .from("profiles")
-        .upsert({ id: user.id, display_name: trimmed }, { onConflict: "id" });
-      setSaving(false);
+    if (!user?.id) return;
+    setSaving(true);
+
+    const cleanDisplay = (displayName || "").trim();
+    const cleanUser = (username || "").trim() || (user.email || "").split("@")[0];
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .upsert(
+        { id: user.id, display_name: cleanDisplay, username: cleanUser },
+        { onConflict: "id" }
+      )
+      .select()
+      .single();
+
+    setSaving(false);
+
+    if (error) {
+      console.error("[profiles] save error:", error);
+      alert(`Couldn't save name: ${error.message}`);
+      return;
     }
-    console.debug("[name] saved ->", trimmed);
+
+    // Persist locally so other parts (like form placeholder) see it
+    localStorage.setItem("spotter_name", cleanDisplay || cleanUser);
+    // Optional: toast
+    console.debug("[profiles] saved ->", data);
   }
 
-  function promptEdit() {
-    const next = window.prompt("Enter your display name:", value || "");
-    if (next !== null) setValue(next);
-  }
-
-  const fallback = (user?.email || "").split("@")[0];
+  if (loading) return null;
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-gray-700">
-        Handle: <span className="font-semibold">@{value || fallback}</span>
-      </span>
-      <button type="button" onClick={promptEdit} className="underline text-[#007c91] text-sm">
-        Edit Name
-      </button>
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-gray-700">Handle:</label>
+        <input
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="border rounded px-2 py-1 text-sm"
+          aria-label="Handle"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-gray-700">Display name:</label>
+        <input
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          className="border rounded px-2 py-1 text-sm"
+          aria-label="Display name"
+        />
+      </div>
+
       <button
         type="button"
         onClick={save}
         disabled={saving}
-        className="px-2 py-1 rounded border border-[#00bcd4] text-sm"
+        className="px-3 py-1 rounded border border-[#00bcd4] text-sm"
+        title="Save profile"
       >
         {saving ? "Saving…" : "Save"}
       </button>
