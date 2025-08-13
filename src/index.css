@@ -1,3 +1,23 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Two-column layout that works even without Tailwind */
+.layout-two-col {
+  display: grid;
+  grid-template-columns: 1fr 320px;  /* feed | sidebar */
+  gap: 24px;
+  align-items: start;
+}
+
+/* Sidebar polish (optional) */
+.leaderboard-card {
+  min-width: 280px;      /* prevents shrink wrap */
+}
+
+/* Stack on small screens */
+@media (max-width: 1024px) {
+  .layout-two-col {
+    grid-template-columns: 1fr;
+  }
+}
