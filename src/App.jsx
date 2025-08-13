@@ -1,47 +1,46 @@
-import { useEffect, useState } from "react";
-import { supabase } from "./supabaseClient";
-import Auth from "./Auth";
-import NewSighting from "./NewSighting";
-import SightingsList from "./SightingsList";
+import { useEffect, useState } from 'react';
+import { supabase } from './supabaseClient';
+import Auth from './Auth';
+import NewSighting from './NewSighting';
+import SightingsList from './SightingsList';
+import RetroHeader from './RetroHeader';
 
 function App() {
   const [session, setSession] = useState(null);
   const [sightings, setSightings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [view, setView] = useState('all'); // 'all' or 'mine'
 
   useEffect(() => {
-    // Get current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
 
-    // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-      }
-    );
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      listener.subscription.unsubscribe();
     };
   }, []);
 
   async function fetchSightings() {
     setLoading(true);
 
-    let query = supabase.from("sightings").select("*").order("created_at", {
-      ascending: false,
-    });
+    let query = supabase
+      .from('sightings')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (filter === "mine" && session?.user) {
-      query = query.eq("user_id", session.user.id);
+    if (view === 'mine' && session?.user) {
+      query = query.eq('user_id', session.user.id);
     }
 
     const { data, error } = await query;
+
     if (error) {
-      console.error("Error fetching sightings:", error);
+      console.error('Error fetching sightings:', error);
     } else {
       setSightings(data);
     }
@@ -49,33 +48,46 @@ function App() {
     setLoading(false);
   }
 
-  // Fetch sightings on load and when filter changes
   useEffect(() => {
     if (session) {
       fetchSightings();
     }
-  }, [session, filter]);
+  }, [session, view]);
+
+  function handleSignOut() {
+    supabase.auth.signOut();
+  }
 
   if (!session) {
-    return <Auth />;
+    return (
+      <div>
+        <RetroHeader />
+        <Auth />
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <h2>Welcome, @{session.user.user_metadata?.display_name || "User"}</h2>
-      <button onClick={() => supabase.auth.signOut()}>Log Out</button>
+    <div>
+      <RetroHeader />
+
+      <h2>
+        Welcome, @{session?.user?.user_metadata?.username || session?.user?.email}
+      </h2>
+
+      <button onClick={handleSignOut}>Log Out</button>
 
       <h3>Report New Sighting</h3>
       <NewSighting session={session} onSightingAdded={fetchSightings} />
 
-      <div style={{ margin: "1rem 0" }}>
-        <button onClick={() => setFilter("all")}>All Sightings</button>
-        <button onClick={() => setFilter("mine")}>My Sightings</button>
+      <div>
+        <button onClick={() => setView('all')}>All Sightings</button>
+        <button onClick={() => setView('mine')}>My Sightings</button>
       </div>
 
       <h3>Recent Sightings</h3>
       {loading ? (
-        <p>Loading sightings...</p>
+        <p>Loading...</p>
       ) : (
         <SightingsList sightings={sightings} />
       )}
