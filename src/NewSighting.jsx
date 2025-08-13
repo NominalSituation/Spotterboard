@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { supabase } from './supabaseClient';
 
 export default function NewSighting({ session, onSightingAdded }) {
-  const [airline, setAirline] = useState('');
-  const [aircraft, setAircraft] = useState('');
-  const [flightNumber, setFlightNumber] = useState('');
-  const [location, setLocation] = useState('');
+  const [airline, setAirline] = useState("");
+  const [aircraft, setAircraft] = useState("");
+  const [flightNumber, setFlightNumber] = useState("");
+  const [location, setLocation] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,27 +17,26 @@ export default function NewSighting({ session, onSightingAdded }) {
 
     const { data, error } = await supabase
       .from('sightings')
-      .insert([
-        {
-          airline,
-          aircraft,
-          flight_number: flightNumber,
-          location,
-          user_id: session.user.id // ✅ This matches your RLS policy
-        }
-      ]);
+      .insert({
+        airline,
+        aircraft_type: aircraft, // ✅ matches Supabase column name
+        flight_number: flightNumber,
+        location,
+        user_id: session.user.id
+      });
 
     if (error) {
       console.error('Error inserting sighting:', error);
       alert('Error submitting sighting: ' + error.message);
     } else {
-      setAirline('');
-      setAircraft('');
-      setFlightNumber('');
-      setLocation('');
-      if (onSightingAdded) {
-        onSightingAdded(data[0]); // Call parent refresh if needed
-      }
+      // Reset form fields
+      setAirline("");
+      setAircraft("");
+      setFlightNumber("");
+      setLocation("");
+
+      // Notify parent to refresh sightings
+      if (onSightingAdded) onSightingAdded();
     }
   };
 
@@ -48,28 +47,24 @@ export default function NewSighting({ session, onSightingAdded }) {
         placeholder="Airline"
         value={airline}
         onChange={(e) => setAirline(e.target.value)}
-        required
       />
       <input
         type="text"
-        placeholder="Aircraft"
+        placeholder="Aircraft Type"
         value={aircraft}
         onChange={(e) => setAircraft(e.target.value)}
-        required
       />
       <input
         type="text"
         placeholder="Flight Number"
         value={flightNumber}
         onChange={(e) => setFlightNumber(e.target.value)}
-        required
       />
       <input
         type="text"
         placeholder="Location"
         value={location}
         onChange={(e) => setLocation(e.target.value)}
-        required
       />
       <button type="submit">Submit</button>
     </form>
