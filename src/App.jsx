@@ -5,6 +5,7 @@ import NewSighting from "./NewSighting";
 import SightingsList from "./SightingsList";
 import RetroHeader from "./RetroHeader";
 import EditDisplayName from "./EditDisplayName";
+import TopSpotterCard from "./TopSpotterCard";
 
 const SELECT_FIELDS =
   "id, airline, location, aircraft_type, flight_number, display_name, user_email, user_id, created_at";
@@ -25,11 +26,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'mine'
 
-  // ==== Auth bootstrap ====
+  // ===== Auth bootstrap =====
   useEffect(() => {
-    console.debug("[auth] boot");
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.debug("[auth] getSession ->", !!session);
       setSession(session);
       if (session) refreshFeeds(session.user.email);
       else setLoading(false);
@@ -37,7 +36,6 @@ export default function App() {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_evt, newSession) => {
-        console.debug("[auth] onAuthStateChange ->", !!newSession);
         setSession(newSession);
         if (newSession) refreshFeeds(newSession.user.email);
         else {
@@ -49,9 +47,8 @@ export default function App() {
     return () => listener?.subscription?.unsubscribe();
   }, []);
 
-  // ==== Fetchers ====
+  // ===== Fetchers =====
   async function fetchAllSightings() {
-    console.debug("[fetch] all sightings");
     const { data, error } = await supabase
       .from("sightings")
       .select(SELECT_FIELDS)
@@ -66,7 +63,6 @@ export default function App() {
 
   async function fetchMySightings(email) {
     if (!email) return [];
-    console.debug("[fetch] my sightings for", email);
     const { data, error } = await supabase
       .from("sightings")
       .select(SELECT_FIELDS)
@@ -82,14 +78,12 @@ export default function App() {
   async function refreshFeeds(email) {
     setLoading(true);
     const [all, mine] = await Promise.all([fetchAllSightings(), fetchMySightings(email)]);
-    console.debug("[fetch] ALL count:", all.length, all[0]);
-    console.debug("[fetch] MINE count:", mine.length, mine[0]);
     setAllSightings(all);
     setMySightings(mine);
     setLoading(false);
   }
 
-  // ==== Realtime inserts ====
+  // ===== Realtime inserts =====
   useEffect(() => {
     const channel = supabase
       .channel("sightings-insert")
@@ -97,7 +91,6 @@ export default function App() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "sightings" },
         (payload) => {
-          console.debug("[rt] insert", payload.new);
           setAllSightings((prev) => [payload.new, ...prev].slice(0, 100));
           if (session?.user?.email && payload.new.user_email === session.user.email) {
             setMySightings((prev) => [payload.new, ...prev]);
@@ -109,17 +102,50 @@ export default function App() {
     return () => supabase.removeChannel(channel);
   }, [session?.user?.email]);
 
-  // ==== Marquee (latest 10 global) ====
+  // ===== Top-spotter shout-out =====
+  const [topLine, setTopLine] = useState(null);
+
+  async function fetchTopShout() {
+    const { data, error } = await supabase
+      .from("leaderboard_30d")
+      .select("handle, sightings")
+      .order("sightings", { ascending: false })
+      .limit(1);
+    if (error) {
+      console.error("[top-spotter] fetch error:", error);
+      return null;
+    }
+    if (!data || !data[0]) return null;
+    const { handle, sightings } = data[0];
+    return `🏆 Top spotter: @${handle} — ${sightings} in 30d`;
+  }
+
+  useEffect(() => {
+    let alive = true;
+    async function loadTop() {
+      const line = await fetchTopShout();
+      if (alive) setTopLine(line);
+    }
+    loadTop();
+    const id = setInterval(loadTop, 5 * 60 * 1000); // refresh every 5min
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  // ===== Marquee (prepend the shout-out) =====
   const marqueeItems = useMemo(() => {
     const rows = allSightings.slice(0, 10);
-    return rows.map((s) => {
+    const lines = rows.map((s) => {
       const who = handleFromRow(s, session?.user?.email);
       const airline = s.airline || "Unknown Airline";
       const type = s.aircraft_type || "—";
       const apt = s.location || "???";
       return `${airline} • ${type} @ ${apt} • by @${who}`;
     });
-  }, [allSightings, session?.user?.email]);
+    return topLine ? [topLine, ...lines] : lines;
+  }, [allSightings, session?.user?.email, topLine]);
 
   return (
     <main
@@ -129,11 +155,12 @@ export default function App() {
           "repeating-linear-gradient(45deg, #f6f6ff, #f6f6ff 14px, #f0faff 14px, #f0faff 28px)",
       }}
     >
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <RetroHeader marqueeItems={marqueeItems} />
 
         {session ? (
           <div className="bg-white border-2 border-[#80deea] rounded-2xl p-4 shadow-md">
+            {/* Welcome + handle + logout */}
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-xl font-bold">Welcome, {session.user.email}</h1>
               <div className="flex items-center gap-3">
@@ -147,48 +174,56 @@ export default function App() {
               </div>
             </div>
 
+            {/* Report form */}
             <NewSighting
               user={session.user}
               onAdd={(newRow) => {
-                // Optimistic UI
                 setAllSightings((prev) => [newRow, ...prev].slice(0, 100));
                 if (newRow.user_email === session.user.email) {
                   setMySightings((prev) => [newRow, ...prev]);
                 }
-                // Canonical refresh
                 refreshFeeds(session.user.email);
               }}
             />
 
-            <div className="mt-6">
-              <div className="inline-flex rounded-full overflow-hidden border-2 border-[#00bcd4] shadow">
-                <button
-                  onClick={() => setActiveTab("all")}
-                  className={`px-4 py-2 text-sm font-semibold ${
-                    activeTab === "all" ? "bg-[#00bcd4] text-white" : "bg-white text-[#007c91]"
-                  }`}
-                  title="See everyone’s sightings"
-                >
-                  🌍 All Sightings
-                </button>
-                <button
-                  onClick={() => setActiveTab("mine")}
-                  className={`px-4 py-2 text-sm font-semibold ${
-                    activeTab === "mine" ? "bg-[#00bcd4] text-white" : "bg-white text-[#007c91]"
-                  }`}
-                  title="Just yours"
-                >
-                  👤 My Sightings
-                </button>
-              </div>
+            {/* Tabs */}
+            <div className="inline-flex rounded-full overflow-hidden border-2 border-[#00bcd4] shadow">
+              <button
+                onClick={() => setActiveTab("all")}
+                className={`px-4 py-2 text-sm font-semibold ${
+                  activeTab === "all" ? "bg-[#00bcd4] text-white" : "bg-white text-[#007c91]"
+                }`}
+                title="See everyone’s sightings"
+              >
+                🌍 All Sightings
+              </button>
+              <button
+                onClick={() => setActiveTab("mine")}
+                className={`px-4 py-2 text-sm font-semibold ${
+                  activeTab === "mine" ? "bg-[#00bcd4] text-white" : "bg-white text-[#007c91]"
+                }`}
+                title="Just yours"
+              >
+                👤 My Sightings
+              </button>
+            </div>
 
-              <div className="mt-4">
-                {activeTab === "all" ? (
+            {/* Main content + sidebar */}
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* LEFT: feed */}
+              <div className="lg:col-span-2">
+                {activeTab === "all" && (
                   <SightingsList sightings={allSightings} loading={loading} />
-                ) : (
+                )}
+                {activeTab === "mine" && (
                   <SightingsList sightings={mySightings} loading={loading} />
                 )}
               </div>
+
+              {/* RIGHT: Top Spotter card */}
+              <aside className="lg:col-span-1 space-y-6">
+                <TopSpotterCard limit={5} />
+              </aside>
             </div>
           </div>
         ) : (
