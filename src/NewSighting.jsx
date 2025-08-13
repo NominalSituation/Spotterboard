@@ -12,7 +12,8 @@ export default function NewSighting({ user, onAdd }) {
   const submit = async (e) => {
     e.preventDefault();
 
-    const displayName = localStorage.getItem("spotter_name") || emailHandle(user?.email);
+    const displayName =
+      localStorage.getItem("spotter_name") || emailHandle(user?.email);
 
     const row = {
       airline: airline.trim(),
@@ -20,14 +21,16 @@ export default function NewSighting({ user, onAdd }) {
       flight_number: flightNumber.trim() || null,
       location: location.trim(),
       user_email: user?.email || null,
-      user_id: user?.id || null, // RLS-friendly
+      user_id: user?.id || null,
       display_name: displayName,
       created_at: new Date().toISOString(),
     };
 
-    console.debug("[insert] row ->", row);
-
-    const { data, error } = await supabase.from("sightings").insert([row]).select().single();
+    const { data, error } = await supabase
+      .from("sightings")
+      .insert([row])
+      .select()
+      .single();
 
     if (error) {
       console.error("[insert] error:", error);
@@ -35,7 +38,7 @@ export default function NewSighting({ user, onAdd }) {
       return;
     }
 
-    onAdd?.(data || row); // optimistic handoff
+    onAdd?.(data || row);
     setAirline("");
     setAircraftType("");
     setFlightNumber("");
@@ -43,43 +46,58 @@ export default function NewSighting({ user, onAdd }) {
   };
 
   return (
-    <form onSubmit={submit} className="mb-8">
-      <h2 className="text-lg font-bold mb-4">Report New Sighting</h2>
+    <form onSubmit={submit} className="mb-6">
+      <h2 className="text-lg font-bold mb-3">Report New Sighting</h2>
 
-      <input
-        type="text"
-        placeholder="Airline"
-        value={airline}
-        onChange={(e) => setAirline(e.target.value)}
-        className="border px-4 py-2 mr-2 mb-2"
-        required
-      />
-      <input
-        type="text"
-        placeholder="Aircraft Type (e.g., A330-300)"
-        value={aircraftType}
-        onChange={(e) => setAircraftType(e.target.value)}
-        className="border px-4 py-2 mr-2 mb-2"
-        required
-      />
-      <input
-        type="text"
-        placeholder="Flight Number (optional)"
-        value={flightNumber}
-        onChange={(e) => setFlightNumber(e.target.value)}
-        className="border px-4 py-2 mr-2 mb-2"
-      />
-      <input
-        type="text"
-        placeholder="Location (e.g., KIAD)"
-        value={location}
-        onChange={(e) => setLocation(e.target.value)}
-        className="border px-4 py-2 mr-2 mb-2"
-        required
-      />
-      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-        Submit
-      </button>
+      {/* Inputs row with comfy padding & spacing */}
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          placeholder="Airline"
+          value={airline}
+          onChange={(e) => setAirline(e.target.value)}
+          className="border rounded px-3 py-2"
+          required
+          aria-label="Airline"
+        />
+
+        <input
+          type="text"
+          placeholder="Aircraft Type (e.g., A330‑300)"
+          value={aircraftType}
+          onChange={(e) => setAircraftType(e.target.value)}
+          className="border rounded px-3 py-2"
+          required
+          aria-label="Aircraft Type"
+        />
+
+        <input
+          type="text"
+          placeholder="Flight Number (optional)"
+          value={flightNumber}
+          onChange={(e) => setFlightNumber(e.target.value)}
+          className="border rounded px-3 py-2"
+          aria-label="Flight Number"
+        />
+
+        <input
+          type="text"
+          placeholder="Location (e.g., KIAD)"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          className="border rounded px-3 py-2"
+          required
+          aria-label="Location"
+        />
+
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+          title="Submit sighting"
+        >
+          Submit
+        </button>
+      </div>
     </form>
   );
 }

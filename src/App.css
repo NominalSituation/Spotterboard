@@ -1,34 +1,158 @@
-/* === Base === */
+/* ================================
+   Spotterboard – App.css
+   Retro vibe + comfy spacing
+   ================================ */
+
+/* Base */
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
+
 body {
+  margin: 0;
   font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  margin: 0;
-  background: #fff;
   color: #111;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      #f6f6ff, #f6f6ff 14px,
+      #f0faff 14px, #f0faff 28px
+    ); /* subtle retro wallpaper */
 }
 
-.page { max-width: 1100px; margin: 0 auto; padding-bottom: 48px; }
+/* Headings */
+h1, h2, h3 {
+  margin: 0 0 0.5rem 0;
+}
 
-/* === Header with retro gradient === */
-.header {
-  background: linear-gradient(90deg, #b9f3ff 0%, #8be6ff 35%, #6ed6f1 70%, #b9f3ff 100%);
-  border-bottom: 1px solid #9ad6e3;
+/* --------------------------------
+   Form comfort (NewSighting.jsx)
+   -------------------------------- */
+form .field,
+form input[type="text"],
+form input[type="email"],
+form input[type="number"],
+form input[type="search"],
+form button[type="submit"] {
+  padding: 8px 12px;          /* comfy interior space */
+  line-height: 1.2;
+  border-radius: 4px;
 }
-.header-inner {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 14px 8px 14px;
+
+form input[type="text"],
+form input[type="email"],
+form input[type="number"],
+form input[type="search"] {
+  border: 1px solid #1b1b1b;
+  background: #fff;
+  margin-right: 10px;          /* space between fields */
+  min-width: 150px;            /* avoid super tiny inputs */
 }
-.logo { font-size: 20px; }
-.brand {
-  font-size: 22px;
+
+form button[type="submit"] {
+  border: 1px solid #1b1b1b;
+  background: #2f7de1;
+  color: #fff;
+  cursor: pointer;
+}
+
+form button[type="submit"]:active {
+  transform: translateY(1px);
+}
+
+/* Compact on narrow screens */
+@media (max-width: 720px) {
+  form .field,
+  form input[type="text"],
+  form input[type="email"],
+  form input[type="number"],
+  form input[type="search"],
+  form button[type="submit"] {
+    margin-bottom: 8px;
+  }
+}
+
+/* --------------------------------
+   Tabs (All / My Sightings)
+   -------------------------------- */
+.tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tabs .tab {
+  border: 1px solid #1b1b1b;
+  background: #efefef;
+  padding: 6px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+}
+
+.tabs .tab.active {
+  background: #00bcd4;
+  color: #fff;
+}
+
+/* --------------------------------
+   Recent Sightings list spacing
+   -------------------------------- */
+.recent-sightings {
+  margin-top: 12px;
+}
+
+.recent-sightings ul {
+  list-style: none;
+  padding: 0;
   margin: 0;
-  letter-spacing: .5px;
-  font-weight: 700;
 }
-.spacer { flex: 1; }
 
-/* logout + generic buttons */
+.recent-sightings li {
+  margin-bottom: 14px;     /* more breathing room */
+  padding-bottom: 10px;
+  border-bottom: 1px dotted #ddd;
+}
+
+.recent-sightings .when {
+  color: #666;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* --------------------------------
+   Optional: Ticker helpers
+   (Your RetroHeader already sets inline styles,
+   but these are here if you want class-based CSS)
+   -------------------------------- */
+.ticker-rail {
+  overflow: hidden;
+  white-space: nowrap;
+  background: #fff8e1;
+  border-top: 1px solid #ffd54f;
+  border-bottom: 1px solid #ffd54f;
+}
+
+.ticker-track {
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform;
+  animation: ticker-left 28s linear infinite; /* slower, smooth */
+}
+
+.ticker-item {
+  display: inline-block;
+  padding: 0 1.5rem;
+}
+
+@keyframes ticker-left {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* --------------------------------
+   Buttons (generic)
+   -------------------------------- */
 .btn {
   border: 1px solid #1b1b1b;
   background: #f3f3f3;
@@ -37,111 +161,12 @@ body {
   font-family: inherit;
   cursor: pointer;
 }
+
 .btn.small { padding: 4px 10px; font-size: 13px; }
 .btn:active { transform: translateY(1px); }
 
-/* === Ticker === */
-.ticker-rail {
-  overflow: hidden;
-  position: relative;
-  height: 30px;
-  border-top: 1px solid #a6e2ef;
-  border-bottom: 1px solid #a6e2ef;
-  background: #d9f8ff;
-}
-.ticker-track {
-  white-space: nowrap;
-  position: absolute;
-  left: 100%;
-  will-change: transform;
-  padding: 5px 0;
-  color: #c01414; /* red text like the screenshot annotation */
-  animation: ticker-left 60s linear infinite; /* slow scroll */
-  font-size: 14px;
-}
-@keyframes ticker-left {
-  0% { transform: translateX(0%); }
-  100% { transform: translateX(-200%); } /* long sweep */
-}
-
-/* === Welcome row === */
-.welcome-row {
-  padding: 12px 14px 0 14px;
-  display: flex; justify-content: space-between; align-items: center;
-}
-.linklike {
-  margin-left: 8px;
-  border: none; background: none; color: #005bbb;
-  cursor: pointer; text-decoration: underline; font-size: 14px;
-}
-
-/* === Report box (yellow) === */
-.report-box {
-  background: #f6f4d9;
-  border: 1px solid #e2dfb1;
-  margin: 12px 14px;
-  padding: 12px;
-  border-radius: 6px;
-}
-.section-title {
-  font-size: 16px;
-  margin: 0 0 10px 0;
-}
-
-.report-form {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-}
-.field {
-  border: 1px solid #1b1b1b;
-  padding: 6px 8px;
-  border-radius: 4px;
-  font-family: inherit;
-}
-
-/* === Tabs / filters === */
-.filters {
-  margin: 8px 14px;
-  display: flex;
-  gap: 8px;
-}
-.tab {
-  border: 1px solid #1b1b1b;
-  background: #efefef;
-  border-radius: 4px;
-  padding: 6px 10px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.tab.active {
-  background: #ddd;
-  box-shadow: inset 0 0 0 1px #00000020;
-}
-
-/* === Sightings list === */
-.recent { margin: 18px 14px; }
+/* --------------------------------
+   Utility helpers (optional)
+   -------------------------------- */
+.container { max-width: 1100px; margin: 0 auto; }
 .muted { color: #666; }
-
-.sighting-list {
-  list-style: none;
-  padding: 0;
-  margin: 12px 0 0 0;
-}
-.sighting-item {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px dotted #ddd;
-  font-size: 14px;
-}
-.bullet { line-height: 22px; }
-.sighting-lines .line-1 { font-weight: 600; }
-.sighting-lines .line-2 { color: #333; }
-.sighting-lines .line-3 { color: #666; font-size: 12px; margin-top: 2px; }
-
-/* small screens */
-@media (max-width: 720px) {
-  .report-form { grid-template-columns: 1fr 1fr; }
-}
