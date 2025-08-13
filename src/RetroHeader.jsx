@@ -17,20 +17,19 @@ export default function RetroHeader({ marqueeItems = [] }) {
 
       {/* Marquee bar (single line) */}
       <div className="bg-[#fff8e1] border-t border-[#ffd54f] py-1 overflow-hidden">
-        {/* rail enforces single line; track scrolls */}
         <div
           className="w-full"
           style={{
-            whiteSpace: "nowrap",        // <- force one line
+            whiteSpace: "nowrap",
             overflow: "hidden",
           }}
         >
           <div
             style={{
-              display: "inline-block",   // <- track must be inline-block
+              display: "inline-block",
               whiteSpace: "nowrap",
               willChange: "transform",
-              animation: "scroll-left 18s linear infinite",
+              animation: "scroll-left 28s linear infinite", // slower speed
             }}
           >
             {marqueeItems.length ? (
@@ -38,8 +37,8 @@ export default function RetroHeader({ marqueeItems = [] }) {
                 <span
                   key={i}
                   style={{
-                    display: "inline-block", // <- each item stays inline
-                    padding: "0 1.5rem",     // spacing between items
+                    display: "inline-block",
+                    padding: "0 1.5rem",
                   }}
                 >
                   🛫 {msg}
