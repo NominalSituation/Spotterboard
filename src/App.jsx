@@ -4,8 +4,9 @@ import Auth from "./Auth";
 import NewSighting from "./NewSighting";
 import SightingsList from "./SightingsList";
 import RetroHeader from "./RetroHeader";
+import EditDisplayName from "./EditDisplayName";
 
-// best-effort username
+// Fallback handle builder for rows that may not have display_name
 function handleFromRow(row, sessionEmail) {
   return (
     row.display_name ||
@@ -19,12 +20,12 @@ function handleFromRow(row, sessionEmail) {
 export default function App() {
   const [session, setSession] = useState(null);
 
-  // feeds
+  // Feeds
   const [mySightings, setMySightings] = useState([]);
   const [allSightings, setAllSightings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // tab: 'all' | 'mine'
+  // Tabs: "all" | "mine"
   const [activeTab, setActiveTab] = useState("all");
 
   // ===== Auth bootstrap =====
@@ -48,6 +49,7 @@ export default function App() {
         }
       }
     );
+
     return () => listener?.subscription?.unsubscribe();
   }, []);
 
@@ -93,17 +95,21 @@ export default function App() {
     setLoading(false);
   }
 
-  // ===== Realtime inserts to keep feeds + marquee fresh =====
+  // ===== Realtime inserts =====
   useEffect(() => {
     const channel = supabase
       .channel("sightings-insert")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "sightings" }, (payload) => {
-        console.debug("[rt] insert", payload.new);
-        setAllSightings((prev) => [payload.new, ...prev].slice(0, 100));
-        if (session?.user?.email && payload.new.user_email === session.user.email) {
-          setMySightings((prev) => [payload.new, ...prev]);
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "sightings" },
+        (payload) => {
+          console.debug("[rt] insert", payload.new);
+          setAllSightings((prev) => [payload.new, ...prev].slice(0, 100));
+          if (session?.user?.email && payload.new.user_email === session.user.email) {
+            setMySightings((prev) => [payload.new, ...prev]);
+          }
         }
-      })
+      )
       .subscribe();
 
     return () => supabase.removeChannel(channel);
@@ -126,23 +132,29 @@ export default function App() {
     <main
       className="min-h-screen p-4"
       style={{
+        // light retro wallpaper vibe (matches your old look)
         background:
           "repeating-linear-gradient(45deg, #f6f6ff, #f6f6ff 14px, #f0faff 14px, #f0faff 28px)",
       }}
     >
       <div className="max-w-3xl mx-auto">
+        {/* Original retro header with the scrolling marquee */}
         <RetroHeader marqueeItems={marqueeItems} />
 
         {session ? (
           <div className="bg-white border-2 border-[#80deea] rounded-2xl p-4 shadow-md">
+            {/* Welcome row + Edit Name + Logout */}
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-xl font-bold">Welcome, {session.user.email}</h1>
-              <button
-                onClick={() => supabase.auth.signOut()}
-                className="bg-red-600 text-white px-4 py-2 rounded"
-              >
-                Log Out
-              </button>
+              <div className="flex items-center gap-3">
+                <EditDisplayName user={session.user} />
+                <button
+                  onClick={() => supabase.auth.signOut()}
+                  className="bg-red-600 text-white px-4 py-2 rounded"
+                >
+                  Log Out
+                </button>
+              </div>
             </div>
 
             {/* Report form */}
