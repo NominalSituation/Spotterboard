@@ -10,21 +10,49 @@ export default function RetroHeader({ marqueeItems = [] }) {
           imageRendering: "pixelated",
         }}
       >
-        <h1 className="text-3xl font-black tracking-wide drop-shadow-sm">✈️ Spotterboard</h1>
+        <h1 className="text-3xl font-black tracking-wide drop-shadow-sm">
+          ✈️ Spotterboard
+        </h1>
       </div>
 
-      {/* Marquee bar */}
-      <div className="bg-[#fff8e1] border-t border-[#ffd54f] py-1">
-        <div className="whitespace-nowrap overflow-hidden">
-          <div className="inline-block" style={{ animation: "scroll-left 18s linear infinite" }}>
+      {/* Marquee bar (single line) */}
+      <div className="bg-[#fff8e1] border-t border-[#ffd54f] py-1 overflow-hidden">
+        {/* rail enforces single line; track scrolls */}
+        <div
+          className="w-full"
+          style={{
+            whiteSpace: "nowrap",        // <- force one line
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              display: "inline-block",   // <- track must be inline-block
+              whiteSpace: "nowrap",
+              willChange: "transform",
+              animation: "scroll-left 18s linear infinite",
+            }}
+          >
             {marqueeItems.length ? (
               marqueeItems.map((msg, i) => (
-                <span className="mx-6" key={i}>🛫 {msg}</span>
+                <span
+                  key={i}
+                  style={{
+                    display: "inline-block", // <- each item stays inline
+                    padding: "0 1.5rem",     // spacing between items
+                  }}
+                >
+                  🛫 {msg}
+                </span>
               ))
             ) : (
               <>
-                <span className="mx-6">🌤️ Welcome to the public sightings feed!</span>
-                <span className="mx-6">🛰️ Tip: Add the airport code and model.</span>
+                <span style={{ display: "inline-block", padding: "0 1.5rem" }}>
+                  🌤️ Welcome to the public sightings feed!
+                </span>
+                <span style={{ display: "inline-block", padding: "0 1.5rem" }}>
+                  🛰️ Tip: Add the airport code and model.
+                </span>
               </>
             )}
           </div>
